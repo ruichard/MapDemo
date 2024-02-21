@@ -10,6 +10,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import com.demo.map.BuildConfig.TOMTOM_API_KEY
+import com.tomtom.quantity.Distance
 import com.tomtom.sdk.datamanagement.navigationtile.NavigationTileStore
 import com.tomtom.sdk.datamanagement.navigationtile.NavigationTileStoreConfiguration
 import com.tomtom.sdk.location.GeoLocation
@@ -34,11 +35,15 @@ import com.tomtom.sdk.map.display.route.RouteOptions
 import com.tomtom.sdk.map.display.ui.MapFragment
 import com.tomtom.sdk.map.display.ui.currentlocation.CurrentLocationButton.VisibilityPolicy
 import com.tomtom.sdk.navigation.ActiveRouteChangedListener
+import com.tomtom.sdk.navigation.GuidanceUpdatedListener
 import com.tomtom.sdk.navigation.LocationContextUpdatedListener
 import com.tomtom.sdk.navigation.NavigationOptions
 import com.tomtom.sdk.navigation.ProgressUpdatedListener
 import com.tomtom.sdk.navigation.RoutePlan
 import com.tomtom.sdk.navigation.TomTomNavigation
+import com.tomtom.sdk.navigation.guidance.GuidanceAnnouncement
+import com.tomtom.sdk.navigation.guidance.InstructionPhase
+import com.tomtom.sdk.navigation.guidance.instruction.GuidanceInstruction
 import com.tomtom.sdk.navigation.online.Configuration
 import com.tomtom.sdk.navigation.online.OnlineTomTomNavigationFactory
 import com.tomtom.sdk.navigation.ui.NavigationFragment
@@ -274,9 +279,7 @@ class MapActivity : AppCompatActivity() {
         tomTomNavigation.addProgressUpdatedListener(progressUpdatedListener)
         tomTomNavigation.addActiveRouteChangedListener(activeRouteChangedListener)
         tomTomNavigation.addLocationContextUpdatedListener(locationContextUpdatedListener)
-
-        val navigationOptions = NavigationOptions(routePlan)
-        tomTomNavigation.start(navigationOptions)
+        tomTomNavigation.addGuidanceUpdatedListener(guidanceUpdatedListener)
     }
 
     private val navigationListener = object : NavigationFragment.NavigationListener {
@@ -327,7 +330,24 @@ class MapActivity : AppCompatActivity() {
     }
 
     private val locationContextUpdatedListener = LocationContextUpdatedListener { locationContext ->
-        Toast.makeText(this, "$locationContext", Toast.LENGTH_SHORT).show()
+        Log.e(TAG, "$locationContext")
+    }
+
+    private val guidanceUpdatedListener = object : GuidanceUpdatedListener {
+        override fun onInstructionsChanged(instructions: List<GuidanceInstruction>) {
+        }
+
+        override fun onAnnouncementGenerated(announcement: GuidanceAnnouncement, shouldPlay: Boolean) {
+            Toast.makeText(this@MapActivity, announcement.plainTextMessage, Toast.LENGTH_SHORT).show()
+            Log.e(TAG, "ssmlMessage=${announcement.ssmlMessage}")
+        }
+
+        override fun onDistanceToNextInstructionChanged(
+            distance: Distance,
+            instructions: List<GuidanceInstruction>,
+            currentPhase: InstructionPhase
+        ) {
+        }
     }
 
     private fun setSimulationLocationProviderToNavigation(route: Route) {
@@ -350,6 +370,7 @@ class MapActivity : AppCompatActivity() {
         tomTomNavigation.removeProgressUpdatedListener(progressUpdatedListener)
         tomTomNavigation.removeActiveRouteChangedListener(activeRouteChangedListener)
         tomTomNavigation.removeLocationContextUpdatedListener(locationContextUpdatedListener)
+        tomTomNavigation.removeGuidanceUpdatedListener(guidanceUpdatedListener)
         clearMap()
         initLocationProvider()
         enableUserLocation()
